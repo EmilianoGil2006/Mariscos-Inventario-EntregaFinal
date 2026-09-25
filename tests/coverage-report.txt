@@ -1,0 +1,33 @@
+
+> mariscos-inventario@1.0.0 test
+> jest --coverage
+
+PASS tests/insumos.test.js
+PASS tests/auth.test.js
+PASS tests/app.test.js
+------------------------|---------|----------|---------|---------|-------------------
+File                    | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+------------------------|---------|----------|---------|---------|-------------------
+All files               |   97.14 |    94.44 |   92.85 |   97.76 |                   
+ src                    |     100 |      100 |     100 |     100 |                   
+  app.js                |     100 |      100 |     100 |     100 |                   
+ src/controllers        |      98 |    94.73 |     100 |      98 |                   
+  auth.controller.js    |   96.15 |    94.11 |     100 |   96.15 | 36                
+  insumos.controller.js |     100 |    95.23 |     100 |     100 | 23                
+ src/data               |   94.28 |      100 |   85.71 |   96.55 |                   
+  insumos.js            |     100 |      100 |     100 |     100 |                   
+  users.js              |   84.61 |      100 |   66.66 |    90.9 | 23                
+ src/middleware         |   94.11 |       90 |     100 |   94.11 |                   
+  auth.js               |   94.11 |       90 |     100 |   94.11 | 23                
+ src/routes             |     100 |      100 |     100 |     100 |                   
+  auth.routes.js        |     100 |      100 |     100 |     100 |                   
+  insumos.routes.js     |     100 |      100 |     100 |     100 |                   
+ src/utils              |     100 |      100 |     100 |     100 |                   
+  jwt.js                |     100 |      100 |     100 |     100 |                   
+------------------------|---------|----------|---------|---------|-------------------
+
+Test Suites: 3 passed, 3 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        2.25 s, estimated 3 s
+Ran all test suites.

@@ -1,0 +1,105 @@
+name: CI/CD - Mariscos El Gordo Inventario
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # 1) Pruebas unitarias y cobertura (Jest)
+  test:
+    name: Pruebas unitarias y cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Correr pruebas con cobertura (minimo 80%)
+        run: npm test
+
+      - name: Subir reporte de cobertura como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  # 2) Analisis de calidad de codigo con SonarQube / SonarCloud
+  #    Requiere configurar el secreto SONAR_TOKEN en GitHub
+  #    (Settings > Secrets and variables > Actions > New repository secret)
+  sonarcloud:
+    name: Analisis de calidad (SonarCloud)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependencias y generar cobertura
+        run: |
+          npm ci
+          npm test
+
+      - name: Analisis SonarCloud
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # 3) Despliegue automatico a un entorno de prueba (Render)
+  #    Requiere configurar el secreto RENDER_DEPLOY_HOOK en GitHub
+  #    (se obtiene desde Render > tu servicio > Settings > Deploy Hook)
+  deploy:
+    name: Despliegue a entorno de prueba
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Disparar despliegue en Render
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+            echo "Despliegue disparado correctamente."
+          else
+            echo "RENDER_DEPLOY_HOOK no configurado. Omite este paso o configura el secreto."
+          fi
+
+  # 4) Escaneo de seguridad OWASP ZAP (baseline scan) contra el entorno de prueba desplegado
+  #    Se ejecuta despues del deploy, apuntando a la URL publica de la app.
+  #    Configura el secreto o variable TARGET_URL con la URL de tu entorno de prueba.
+  zap-scan:
+    name: Escaneo de seguridad (OWASP ZAP)
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ vars.TARGET_URL || 'https://example-entorno-prueba.onrender.com' }}
+          cmd_options: "-a"
+        continue-on-error: true
+
+      - name: Subir reporte de ZAP como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html
