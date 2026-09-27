@@ -8,9 +8,9 @@ PASS tests/app.test.js
 ------------------------|---------|----------|---------|---------|-------------------
 File                    | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
 ------------------------|---------|----------|---------|---------|-------------------
-All files               |   97.14 |    94.44 |   92.85 |   97.76 |                   
- src                    |     100 |      100 |     100 |     100 |                   
-  app.js                |     100 |      100 |     100 |     100 |                   
+All files               |   96.52 |    94.44 |   89.65 |    97.1 |                   
+ src                    |   94.44 |      100 |   66.66 |   94.44 |                   
+  app.js                |   94.44 |      100 |   66.66 |   94.44 | 45                
  src/controllers        |      98 |    94.73 |     100 |      98 |                   
   auth.controller.js    |   96.15 |    94.11 |     100 |   96.15 | 36                
   insumos.controller.js |     100 |    95.23 |     100 |     100 | 23                
@@ -29,5 +29,5 @@ All files               |   97.14 |    94.44 |   92.85 |   97.76 |
 Test Suites: 3 passed, 3 total
 Tests:       26 passed, 26 total
 Snapshots:   0 total
-Time:        2.25 s, estimated 3 s
+Time:        2.115 s, estimated 3 s
 Ran all test suites.

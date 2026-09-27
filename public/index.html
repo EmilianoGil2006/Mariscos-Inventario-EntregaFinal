@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mariscos El Gordo — Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ============== VISTA: LOGIN ============== -->
+  <section id="view-login" class="view">
+    <div class="login-layout">
+      <div class="login-brand">
+        <svg class="wave" viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,120 C150,180 300,60 600,120 L600,200 L0,200 Z" fill="rgba(255,255,255,0.08)"/>
+          <path d="M0,150 C180,90 420,190 600,140 L600,200 L0,200 Z" fill="rgba(255,255,255,0.14)"/>
+        </svg>
+        <div class="login-brand-content">
+          <p class="eyebrow">Sistema de inventario</p>
+          <h1>Mariscos<br>El Gordo</h1>
+          <p class="lead">Control de camarón, pescado, pulpo, verduras y bebidas entre las 3 sucursales, en un solo lugar.</p>
+        </div>
+      </div>
+      <div class="login-form-panel">
+        <form id="login-form" class="login-form">
+          <h2>Iniciar sesión</h2>
+          <p class="form-hint">Usa tu usuario de sucursal o el de administración.</p>
+
+          <label for="login-username">Usuario</label>
+          <input id="login-username" name="username" type="text" autocomplete="username" required value="admin" />
+
+          <label for="login-password">Contraseña</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required value="admin123" />
+
+          <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+          <p id="login-error" class="form-error" hidden></p>
+
+          <p class="form-footnote">Cuenta de prueba: <strong>admin / admin123</strong></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== VISTA: DASHBOARD ============== -->
+  <section id="view-dashboard" class="view hidden">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="topbar-mark">MEG</span>
+        <span class="topbar-title">Mariscos El Gordo · Inventario</span>
+      </div>
+      <div class="topbar-user">
+        <span id="user-info" class="user-info"></span>
+        <button id="logout-btn" class="btn btn-ghost">Salir</button>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <div class="toolbar">
+        <div class="branch-filter" id="branch-filter">
+          <button class="chip is-active" data-sucursal="todas">Todas</button>
+          <button class="chip" data-sucursal="Centro">Centro</button>
+          <button class="chip" data-sucursal="Norte">Norte</button>
+          <button class="chip" data-sucursal="Sur">Sur</button>
+        </div>
+        <button id="new-insumo-btn" class="btn btn-primary">+ Nuevo insumo</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">Insumos registrados</span>
+        </div>
+        <div class="stat stat-alert">
+          <span class="stat-value" id="stat-bajo">0</span>
+          <span class="stat-label">Con stock bajo</span>
+        </div>
+        <div class="stat stat-warning">
+          <span class="stat-value" id="stat-caduca">0</span>
+          <span class="stat-label">Por caducar (7 días)</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="insumos-table">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th>Sucursal</th>
+              <th>Cantidad</th>
+              <th>Mínimo</th>
+              <th>Caducidad</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="insumos-tbody">
+            <!-- filas generadas por app.js -->
+          </tbody>
+        </table>
+        <p id="empty-state" class="empty-state" hidden>No hay insumos para esta sucursal todavía.</p>
+      </div>
+
+    </main>
+  </section>
+
+  <!-- ============== MODAL: NUEVO INSUMO ============== -->
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal" role="dialog" aria-labelledby="modal-title">
+      <h2 id="modal-title">Nuevo insumo</h2>
+      <form id="insumo-form">
+        <label for="f-nombre">Nombre</label>
+        <input id="f-nombre" name="nombre" type="text" placeholder="Camarón" required />
+
+        <label for="f-sucursal">Sucursal</label>
+        <select id="f-sucursal" name="sucursal" required>
+          <option value="Centro">Centro</option>
+          <option value="Norte">Norte</option>
+          <option value="Sur">Sur</option>
+        </select>
+
+        <div class="form-row">
+          <div>
+            <label for="f-cantidad">Cantidad inicial</label>
+            <input id="f-cantidad" name="cantidad" type="number" min="0" step="0.5" required />
+          </div>
+          <div>
+            <label for="f-unidad">Unidad</label>
+            <input id="f-unidad" name="unidad" type="text" placeholder="kg" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label for="f-minimo">Stock mínimo</label>
+            <input id="f-minimo" name="stockMinimo" type="number" min="0" step="0.5" required />
+          </div>
+          <div>
+            <label for="f-caducidad">Caducidad</label>
+            <input id="f-caducidad" name="caducidad" type="date" />
+          </div>
+        </div>
+
+        <p id="modal-error" class="form-error" hidden></p>
+
+        <div class="modal-actions">
+          <button type="button" id="modal-cancel" class="btn btn-ghost">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar insumo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
