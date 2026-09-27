@@ -21,7 +21,7 @@ function login(req, res) {
     return res.status(401).json({ error: "Credenciales invalidas" });
   }
 
-  const token = signToken({ id: user.id, username: user.username, role: user.role });
+  const token = signToken({ id: user.id, username: user.username, role: user.role, sucursal: user.sucursal });
   return res.status(200).json({
     token,
     user: { id: user.id, username: user.username, role: user.role, sucursal: user.sucursal },

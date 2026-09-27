@@ -3,31 +3,41 @@
 > jest --coverage
 
 PASS tests/insumos.test.js
+PASS tests/solicitudes.test.js
+PASS tests/transferencias.test.js
 PASS tests/auth.test.js
 PASS tests/app.test.js
-------------------------|---------|----------|---------|---------|-------------------
-File                    | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
-------------------------|---------|----------|---------|---------|-------------------
-All files               |   96.52 |    94.44 |   89.65 |    97.1 |                   
- src                    |   94.44 |      100 |   66.66 |   94.44 |                   
-  app.js                |   94.44 |      100 |   66.66 |   94.44 | 45                
- src/controllers        |      98 |    94.73 |     100 |      98 |                   
-  auth.controller.js    |   96.15 |    94.11 |     100 |   96.15 | 36                
-  insumos.controller.js |     100 |    95.23 |     100 |     100 | 23                
- src/data               |   94.28 |      100 |   85.71 |   96.55 |                   
-  insumos.js            |     100 |      100 |     100 |     100 |                   
-  users.js              |   84.61 |      100 |   66.66 |    90.9 | 23                
- src/middleware         |   94.11 |       90 |     100 |   94.11 |                   
-  auth.js               |   94.11 |       90 |     100 |   94.11 | 23                
- src/routes             |     100 |      100 |     100 |     100 |                   
-  auth.routes.js        |     100 |      100 |     100 |     100 |                   
-  insumos.routes.js     |     100 |      100 |     100 |     100 |                   
- src/utils              |     100 |      100 |     100 |     100 |                   
-  jwt.js                |     100 |      100 |     100 |     100 |                   
-------------------------|---------|----------|---------|---------|-------------------
+-------------------------------|---------|----------|---------|---------|-------------------
+File                           | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------------------|---------|----------|---------|---------|-------------------
+All files                      |   94.62 |     88.4 |   88.33 |   96.64 |                   
+ src                           |   95.45 |      100 |   66.66 |   95.45 |                   
+  app.js                       |   95.45 |      100 |   66.66 |   95.45 | 49                
+ src/controllers               |   96.82 |    92.47 |     100 |   96.72 |                   
+  auth.controller.js           |   96.15 |    94.11 |     100 |   96.15 | 36                
+  insumos.controller.js        |     100 |    96.77 |     100 |     100 | 49                
+  solicitudes.controller.js    |      95 |     86.2 |     100 |   94.87 | 11,71             
+  transferencias.controller.js |      95 |    93.75 |     100 |   94.73 | 31                
+ src/data                      |    88.5 |    66.66 |   81.81 |   95.89 |                   
+  insumos.js                   |   94.28 |    76.92 |     100 |     100 | 56,65-74          
+  solicitudes.js               |   84.61 |       50 |   77.77 |   95.45 | 16                
+  transferencias.js            |   81.81 |        0 |      60 |      90 | 12                
+  users.js                     |   86.66 |      100 |   71.42 |   91.66 | 44                
+ src/middleware                |   94.11 |       90 |     100 |   94.11 |                   
+  auth.js                      |   94.11 |       90 |     100 |   94.11 | 23                
+ src/routes                    |     100 |      100 |     100 |     100 |                   
+  auth.routes.js               |     100 |      100 |     100 |     100 |                   
+  insumos.routes.js            |     100 |      100 |     100 |     100 |                   
+  solicitudes.routes.js        |     100 |      100 |     100 |     100 |                   
+  transferencias.routes.js     |     100 |      100 |     100 |     100 |                   
+ src/services                  |   95.45 |    86.66 |     100 |   95.45 |                   
+  inventoryTransfer.js         |   95.45 |    86.66 |     100 |   95.45 | 21                
+ src/utils                     |     100 |      100 |     100 |     100 |                   
+  jwt.js                       |     100 |      100 |     100 |     100 |                   
+-------------------------------|---------|----------|---------|---------|-------------------
 
-Test Suites: 3 passed, 3 total
-Tests:       26 passed, 26 total
+Test Suites: 5 passed, 5 total
+Tests:       64 passed, 64 total
 Snapshots:   0 total
-Time:        2.115 s, estimated 3 s
+Time:        9.676 s, estimated 10 s
 Ran all test suites.

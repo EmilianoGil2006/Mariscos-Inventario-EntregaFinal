@@ -3,6 +3,8 @@ const path = require("path");
 const helmet = require("helmet");
 const authRoutes = require("./routes/auth.routes");
 const insumosRoutes = require("./routes/insumos.routes");
+const transferenciasRoutes = require("./routes/transferencias.routes");
+const solicitudesRoutes = require("./routes/solicitudes.routes");
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/insumos", insumosRoutes);
+app.use("/api/transferencias", transferenciasRoutes);
+app.use("/api/solicitudes", solicitudesRoutes);
 
 // Frontend estatico (login + dashboard de inventario)
 app.use(express.static(path.join(__dirname, "..", "public")));

@@ -257,9 +257,108 @@ html, body {
 .topbar .btn-ghost:hover { background: rgba(255,255,255,0.1); }
 
 .content {
-  max-width: 68rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 2rem 1.75rem 4rem;
+}
+
+/* ============== TABS ============== */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--teal-900);
+  padding: 0 1.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.tab {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--sea-200);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.85rem 0.25rem;
+  margin-right: 1.75rem;
+  cursor: pointer;
+}
+
+.tab:hover { color: var(--white); }
+
+.tab.is-active {
+  color: var(--white);
+  border-bottom-color: var(--coral-600);
+}
+
+.tab-panel { display: none; }
+.tab-panel.is-active { display: block; }
+
+/* ============== PANEL CARD (formularios de solicitud/transferencia) ============== */
+
+.panel-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.panel-card h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  margin: 0 0 0.25rem;
+  color: var(--teal-900);
+}
+
+.panel-card .form-hint { margin-bottom: 1.25rem; }
+
+.panel-card label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-600);
+  margin: 0 0 0.4rem;
+}
+
+.panel-card input,
+.panel-card select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-family: var(--font-body);
+  background: var(--white);
+}
+
+.form-row-3 { grid-template-columns: 1fr 1.4fr 1fr; margin-bottom: 1.25rem; }
+.form-row-4 { grid-template-columns: 1fr 1.3fr 0.9fr 1fr; margin-bottom: 1.25rem; }
+
+/* ============== ESTADO badges (solicitudes) ============== */
+
+.badge-pendiente { background: var(--amber-600); color: var(--white); }
+.badge-atendida { background: var(--teal-600); color: var(--white); }
+.badge-rechazada { background: var(--ink-400); color: var(--white); }
+
+.col-admin-only.is-hidden-col,
+td.col-admin-only.is-hidden-col { display: none; }
+
+.inline-qty {
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 0.88rem;
+  margin-right: 0.4rem;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 .toolbar {
@@ -470,7 +569,10 @@ html, body {
   .login-brand { padding: 2.5rem; min-height: 40vh; }
   .login-brand h1 { font-size: 2.75rem; }
   .stats-row { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
+  .form-row,
+  .form-row-3,
+  .form-row-4 { grid-template-columns: 1fr; }
   .insumos-table { font-size: 0.85rem; }
   .toolbar { flex-direction: column; align-items: stretch; }
+  .tabs { overflow-x: auto; }
 }

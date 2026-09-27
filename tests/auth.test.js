@@ -2,34 +2,36 @@ const request = require("supertest");
 const app = require("../src/app");
 const usersDb = require("../src/data/users");
 
-describe("POST /api/auth/login", () => {
-  afterEach(() => {
-    usersDb._resetForTests();
-  });
+afterEach(() => {
+  usersDb._resetForTests();
+});
 
+describe("POST /api/auth/login", () => {
   test("regresa un token con credenciales validas del admin sembrado", async () => {
-    const res = await request(app)
-      .post("/api/auth/login")
-      .send({ username: "admin", password: "admin123" });
+    const res = await request(app).post("/api/auth/login").send({ username: "admin", password: "admin123" });
 
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
     expect(res.body.user.role).toBe("admin");
   });
 
-  test("regresa 401 con contrasena incorrecta", async () => {
+  test("regresa un token con credenciales validas de un encargado sembrado, con su sucursal", async () => {
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ username: "admin", password: "incorrecta" });
+      .send({ username: "encargado_norte", password: "clave123" });
 
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe("encargado");
+    expect(res.body.user.sucursal).toBe("Norte");
+  });
+
+  test("regresa 401 con contrasena incorrecta", async () => {
+    const res = await request(app).post("/api/auth/login").send({ username: "admin", password: "incorrecta" });
     expect(res.status).toBe(401);
   });
 
   test("regresa 401 con usuario que no existe", async () => {
-    const res = await request(app)
-      .post("/api/auth/login")
-      .send({ username: "no-existe", password: "algo" });
-
+    const res = await request(app).post("/api/auth/login").send({ username: "no-existe", password: "algo" });
     expect(res.status).toBe(401);
   });
 
@@ -41,23 +43,23 @@ describe("POST /api/auth/login", () => {
 
 describe("POST /api/auth/register", () => {
   let adminToken;
+  let encargadoToken;
 
   beforeEach(async () => {
-    const login = await request(app)
-      .post("/api/auth/login")
-      .send({ username: "admin", password: "admin123" });
-    adminToken = login.body.token;
-  });
+    const adminLogin = await request(app).post("/api/auth/login").send({ username: "admin", password: "admin123" });
+    adminToken = adminLogin.body.token;
 
-  afterEach(() => {
-    usersDb._resetForTests();
+    const encargadoLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "encargado_sur", password: "clave123" });
+    encargadoToken = encargadoLogin.body.token;
   });
 
   test("un admin autenticado puede registrar un nuevo encargado", async () => {
     const res = await request(app)
       .post("/api/auth/register")
       .set("Authorization", `Bearer ${adminToken}`)
-      .send({ username: "encargado_centro", password: "clave123", role: "encargado", sucursal: "Centro" });
+      .send({ username: "encargado_test", password: "clave123", role: "encargado", sucursal: "Centro" });
 
     expect(res.status).toBe(201);
     expect(res.body.user.role).toBe("encargado");
@@ -99,18 +101,9 @@ describe("POST /api/auth/register", () => {
   });
 
   test("un encargado (no admin) no puede registrar usuarios (403)", async () => {
-    await request(app)
-      .post("/api/auth/register")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ username: "encargado_norte", password: "clave123", role: "encargado", sucursal: "Norte" });
-
-    const loginEncargado = await request(app)
-      .post("/api/auth/login")
-      .send({ username: "encargado_norte", password: "clave123" });
-
     const res = await request(app)
       .post("/api/auth/register")
-      .set("Authorization", `Bearer ${loginEncargado.body.token}`)
+      .set("Authorization", `Bearer ${encargadoToken}`)
       .send({ username: "otro_mas", password: "clave123", role: "encargado" });
 
     expect(res.status).toBe(403);

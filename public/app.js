@@ -1,9 +1,14 @@
 const API_BASE = "/api";
 
+const CATEGORIA_LABEL = { proteinas: "Proteínas", verduras: "Verduras", bebidas: "Bebidas" };
+const ESTADO_SOLICITUD_LABEL = { pendiente: "Pendiente", atendida: "Atendida", rechazada: "Rechazada" };
+
 const state = {
   token: sessionStorage.getItem("meg_token") || null,
   user: JSON.parse(sessionStorage.getItem("meg_user") || "null"),
   insumos: [],
+  solicitudes: [],
+  transferencias: [],
   sucursalActiva: "todas",
 };
 
@@ -14,7 +19,15 @@ const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const userInfo = document.getElementById("user-info");
-const branchFilter = document.getElementById("branch-filter");
+
+const tabs = document.getElementById("tabs");
+const panels = {
+  inventario: document.getElementById("panel-inventario"),
+  solicitudes: document.getElementById("panel-solicitudes"),
+  transferencias: document.getElementById("panel-transferencias"),
+};
+
+const branchFilterWrap = document.getElementById("branch-filter");
 const newInsumoBtn = document.getElementById("new-insumo-btn");
 const insumosTbody = document.getElementById("insumos-tbody");
 const emptyState = document.getElementById("empty-state");
@@ -27,6 +40,18 @@ const insumoForm = document.getElementById("insumo-form");
 const modalCancel = document.getElementById("modal-cancel");
 const modalError = document.getElementById("modal-error");
 
+const solicitudFormCard = document.getElementById("solicitud-form-card");
+const solicitudForm = document.getElementById("solicitud-form");
+const solicitudError = document.getElementById("solicitud-error");
+const solicitudesTbody = document.getElementById("solicitudes-tbody");
+const solicitudesEmpty = document.getElementById("solicitudes-empty");
+
+const transferenciaFormCard = document.getElementById("transferencia-form-card");
+const transferenciaForm = document.getElementById("transferencia-form");
+const transferenciaError = document.getElementById("transferencia-error");
+const transferenciasTbody = document.getElementById("transferencias-tbody");
+const transferenciasEmpty = document.getElementById("transferencias-empty");
+
 const toast = document.getElementById("toast");
 
 // ---------- Utilidades ----------
@@ -34,21 +59,19 @@ function showToast(message, isError = false) {
   toast.textContent = message;
   toast.classList.toggle("toast-error", isError);
   toast.classList.remove("hidden");
-  setTimeout(() => toast.classList.add("hidden"), 3200);
+  setTimeout(() => toast.classList.add("hidden"), 3400);
 }
 
 async function apiFetch(path, options = {}) {
-  const headers = Object.assign(
-    { "Content-Type": "application/json" },
-    options.headers || {}
-  );
+  const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
   if (state.token) headers["Authorization"] = `Bearer ${state.token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
-  if (res.status === 401 || res.status === 403) {
-    // token invalido/expirado -> regresar al login
-    if (path !== "/auth/login") {
+  if ((res.status === 401 || res.status === 403) && path !== "/auth/login") {
+    // Solo forzamos logout si el token es el problema (401). Un 403 puede ser
+    // simplemente "no tienes permiso para esta accion" y no debe cerrar sesion.
+    if (res.status === 401) {
       handleLogout();
       throw new Error("Sesión expirada, inicia sesión de nuevo.");
     }
@@ -66,7 +89,7 @@ async function apiFetch(path, options = {}) {
 }
 
 function isStockBajo(insumo) {
-  return Number(insumo.cantidad) <= Number(insumo.stockMinimo);
+  return Number(insumo.cantidadKg) <= Number(insumo.stockMinimo);
 }
 
 function isPorCaducar(insumo) {
@@ -81,12 +104,33 @@ function formatFecha(fechaStr) {
   return `${d}/${m}/${y}`;
 }
 
+function formatFechaHora(isoStr) {
+  if (!isoStr) return "—";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+    " " + d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+}
+
 // ---------- Sesión ----------
+function isAdmin() {
+  return state.user && state.user.role === "admin";
+}
+
 function applySessionUI() {
-  const isAdmin = state.user && state.user.role === "admin";
-  newInsumoBtn.classList.toggle("hidden", !isAdmin);
+  const admin = isAdmin();
+
+  newInsumoBtn.classList.toggle("hidden", !admin);
+  branchFilterWrap.classList.toggle("hidden", !admin);
+
+  solicitudFormCard.classList.toggle("hidden", admin); // solo encargados piden a CEDIS
+  transferenciaFormCard.classList.toggle("hidden", !admin); // solo admin transfiere directo
+
+  document.querySelectorAll(".col-admin-only").forEach((el) => {
+    el.classList.toggle("is-hidden-col", !admin);
+  });
+
   userInfo.textContent = state.user
-    ? `${state.user.username} · ${state.user.role === "admin" ? "Administrador" : "Encargado " + (state.user.sucursal || "")}`
+    ? `${state.user.username} · ${admin ? "Administración (CEDIS + todas)" : "Encargado " + (state.user.sucursal || "")}`
     : "";
 }
 
@@ -98,7 +142,7 @@ function handleLoginSuccess(data) {
   viewLogin.classList.add("hidden");
   viewDashboard.classList.remove("hidden");
   applySessionUI();
-  loadInsumos();
+  loadAll();
 }
 
 function handleLogout() {
@@ -120,10 +164,7 @@ loginForm.addEventListener("submit", async (e) => {
   try {
     const data = await apiFetch("/auth/login", {
       method: "POST",
-      body: JSON.stringify({
-        username: formData.get("username"),
-        password: formData.get("password"),
-      }),
+      body: JSON.stringify({ username: formData.get("username"), password: formData.get("password") }),
     });
     handleLoginSuccess(data);
   } catch (err) {
@@ -134,17 +175,21 @@ loginForm.addEventListener("submit", async (e) => {
 
 logoutBtn.addEventListener("click", handleLogout);
 
-// ---------- Filtro de sucursal ----------
-branchFilter.addEventListener("click", (e) => {
-  const btn = e.target.closest(".chip");
+// ---------- Tabs ----------
+tabs.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab");
   if (!btn) return;
-  document.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-active"));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("is-active"));
+  Object.values(panels).forEach((p) => p.classList.remove("is-active"));
   btn.classList.add("is-active");
-  state.sucursalActiva = btn.dataset.sucursal;
-  renderInsumos();
+  panels[btn.dataset.tab].classList.add("is-active");
 });
 
-// ---------- Cargar y renderizar insumos ----------
+// ---------- Carga de datos ----------
+async function loadAll() {
+  await Promise.all([loadInsumos(), loadSolicitudes(), loadTransferencias()]);
+}
+
 async function loadInsumos() {
   try {
     state.insumos = await apiFetch("/insumos");
@@ -154,8 +199,36 @@ async function loadInsumos() {
   }
 }
 
+async function loadSolicitudes() {
+  try {
+    state.solicitudes = await apiFetch("/solicitudes");
+    renderSolicitudes();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function loadTransferencias() {
+  try {
+    state.transferencias = await apiFetch("/transferencias");
+    renderTransferencias();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+// ---------- INVENTARIO ----------
+branchFilterWrap.addEventListener("click", (e) => {
+  const btn = e.target.closest(".chip");
+  if (!btn) return;
+  document.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-active"));
+  btn.classList.add("is-active");
+  state.sucursalActiva = btn.dataset.sucursal;
+  renderInsumos();
+});
+
 function renderInsumos() {
-  const isAdmin = state.user && state.user.role === "admin";
+  const admin = isAdmin();
   const filtrados =
     state.sucursalActiva === "todas"
       ? state.insumos
@@ -178,22 +251,23 @@ function renderInsumos() {
 
     tr.innerHTML = `
       <td class="insumo-nombre">${insumo.nombre}</td>
+      <td>${CATEGORIA_LABEL[insumo.categoria] || insumo.categoria}</td>
       <td>${insumo.sucursal}</td>
       <td>
         <div class="stock-editor">
-          <input type="number" min="0" step="0.5" value="${insumo.cantidad}" data-id="${insumo.id}" class="stock-input" />
-          <span>${insumo.unidad}</span>
+          <input type="number" min="0" step="0.5" value="${insumo.cantidadKg}" data-id="${insumo.id}" class="stock-input" />
+          <span>kg</span>
           <button class="btn btn-ghost btn-small save-stock-btn" data-id="${insumo.id}">Guardar</button>
         </div>
       </td>
-      <td>${insumo.stockMinimo} ${insumo.unidad}</td>
+      <td>${insumo.stockMinimo} kg</td>
       <td>${formatFecha(insumo.caducidad)}</td>
       <td>
         ${bajo ? '<span class="badge badge-bajo">Stock bajo</span>' : ""}
         ${caduca ? '<span class="badge badge-caduca">Caduca pronto</span>' : ""}
       </td>
       <td>
-        ${isAdmin ? `<button class="btn btn-danger delete-btn" data-id="${insumo.id}">Eliminar</button>` : ""}
+        ${admin ? `<button class="btn btn-danger delete-btn" data-id="${insumo.id}">Eliminar</button>` : ""}
       </td>
     `;
     insumosTbody.appendChild(tr);
@@ -204,7 +278,6 @@ function renderInsumos() {
   statCaduca.textContent = caducaCount;
 }
 
-// Delegación de eventos para guardar stock / eliminar
 insumosTbody.addEventListener("click", async (e) => {
   const saveBtn = e.target.closest(".save-stock-btn");
   const deleteBtn = e.target.closest(".delete-btn");
@@ -215,7 +288,7 @@ insumosTbody.addEventListener("click", async (e) => {
     try {
       const data = await apiFetch(`/insumos/${id}/stock`, {
         method: "PUT",
-        body: JSON.stringify({ cantidad: input.value }),
+        body: JSON.stringify({ cantidadKg: input.value }),
       });
       const idx = state.insumos.findIndex((i) => i.id === Number(id));
       state.insumos[idx] = data.insumo;
@@ -265,9 +338,9 @@ insumoForm.addEventListener("submit", async (e) => {
       method: "POST",
       body: JSON.stringify({
         nombre: formData.get("nombre"),
+        categoria: formData.get("categoria"),
         sucursal: formData.get("sucursal"),
-        cantidad: formData.get("cantidad"),
-        unidad: formData.get("unidad"),
+        cantidadKg: formData.get("cantidadKg"),
         stockMinimo: formData.get("stockMinimo"),
         caducidad: formData.get("caducidad") || null,
       }),
@@ -282,12 +355,157 @@ insumoForm.addEventListener("submit", async (e) => {
   }
 });
 
+// ---------- SOLICITUDES ----------
+solicitudForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  solicitudError.hidden = true;
+  const formData = new FormData(solicitudForm);
+  try {
+    const nueva = await apiFetch("/solicitudes", {
+      method: "POST",
+      body: JSON.stringify({
+        categoria: formData.get("categoria"),
+        nombre: formData.get("nombre"),
+        cantidadKg: formData.get("cantidadKg"),
+      }),
+    });
+    state.solicitudes.unshift(nueva);
+    renderSolicitudes();
+    solicitudForm.reset();
+    showToast(`Solicitud enviada a CEDIS: ${nueva.cantidadKg} kg de ${nueva.nombre}`);
+  } catch (err) {
+    solicitudError.textContent = err.message;
+    solicitudError.hidden = false;
+  }
+});
+
+function renderSolicitudes() {
+  const admin = isAdmin();
+  solicitudesTbody.innerHTML = "";
+  solicitudesEmpty.hidden = state.solicitudes.length !== 0;
+
+  state.solicitudes
+    .slice()
+    .sort((a, b) => new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud))
+    .forEach((s) => {
+      const tr = document.createElement("tr");
+      const pendiente = s.estado === "pendiente";
+
+      let acciones = "";
+      if (admin && pendiente) {
+        acciones = `
+          <div class="row-actions">
+            <input type="number" min="0.5" step="0.5" value="${s.cantidadKg}" class="inline-qty atender-qty" data-id="${s.id}" />
+            <button class="btn btn-primary btn-small atender-btn" data-id="${s.id}">Atender</button>
+            <button class="btn btn-danger btn-small rechazar-btn" data-id="${s.id}">Rechazar</button>
+          </div>
+        `;
+      }
+
+      tr.innerHTML = `
+        <td class="col-admin-only${admin ? "" : " is-hidden-col"}">${s.sucursal}</td>
+        <td>${CATEGORIA_LABEL[s.categoria] || s.categoria}</td>
+        <td>${s.nombre}</td>
+        <td>${s.cantidadKg} kg</td>
+        <td><span class="badge badge-${s.estado}">${ESTADO_SOLICITUD_LABEL[s.estado] || s.estado}</span></td>
+        <td>${formatFechaHora(s.fechaSolicitud)}</td>
+        <td>${acciones}</td>
+      `;
+      solicitudesTbody.appendChild(tr);
+    });
+}
+
+solicitudesTbody.addEventListener("click", async (e) => {
+  const atenderBtn = e.target.closest(".atender-btn");
+  const rechazarBtn = e.target.closest(".rechazar-btn");
+
+  if (atenderBtn) {
+    const id = atenderBtn.dataset.id;
+    const qtyInput = solicitudesTbody.querySelector(`.atender-qty[data-id="${id}"]`);
+    try {
+      const data = await apiFetch(`/solicitudes/${id}/atender`, {
+        method: "PUT",
+        body: JSON.stringify({ cantidadKg: qtyInput.value }),
+      });
+      const idx = state.solicitudes.findIndex((s) => s.id === Number(id));
+      state.solicitudes[idx] = data.solicitud;
+      state.transferencias.unshift(data.transferencia);
+      renderSolicitudes();
+      renderTransferencias();
+      await loadInsumos(); // el stock de CEDIS y de la sucursal cambiaron
+      showToast(`Solicitud atendida: se transfirieron ${data.transferencia.cantidadKg} kg`);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  }
+
+  if (rechazarBtn) {
+    const id = rechazarBtn.dataset.id;
+    try {
+      const actualizada = await apiFetch(`/solicitudes/${id}/rechazar`, { method: "PUT" });
+      const idx = state.solicitudes.findIndex((s) => s.id === Number(id));
+      state.solicitudes[idx] = actualizada;
+      renderSolicitudes();
+      showToast("Solicitud rechazada");
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  }
+});
+
+// ---------- TRANSFERENCIAS ----------
+transferenciaForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  transferenciaError.hidden = true;
+  const formData = new FormData(transferenciaForm);
+  try {
+    const nueva = await apiFetch("/transferencias", {
+      method: "POST",
+      body: JSON.stringify({
+        categoria: formData.get("categoria"),
+        nombre: formData.get("nombre"),
+        cantidadKg: formData.get("cantidadKg"),
+        destino: formData.get("destino"),
+      }),
+    });
+    state.transferencias.unshift(nueva);
+    renderTransferencias();
+    await loadInsumos(); // refleja la resta en CEDIS y la suma en la sucursal destino
+    transferenciaForm.reset();
+    showToast(`Se transfirieron ${nueva.cantidadKg} kg de ${nueva.nombre} a ${nueva.destino}`);
+  } catch (err) {
+    transferenciaError.textContent = err.message;
+    transferenciaError.hidden = false;
+  }
+});
+
+function renderTransferencias() {
+  transferenciasTbody.innerHTML = "";
+  transferenciasEmpty.hidden = state.transferencias.length !== 0;
+
+  state.transferencias
+    .slice()
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .forEach((t) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="insumo-nombre">${t.nombre}</td>
+        <td>${CATEGORIA_LABEL[t.categoria] || t.categoria}</td>
+        <td>${t.cantidadKg} kg</td>
+        <td>${t.destino}</td>
+        <td>${formatFechaHora(t.fecha)}</td>
+        <td>${t.realizadaPor}</td>
+      `;
+      transferenciasTbody.appendChild(tr);
+    });
+}
+
 // ---------- Arranque ----------
 (function init() {
   if (state.token && state.user) {
     viewLogin.classList.add("hidden");
     viewDashboard.classList.remove("hidden");
     applySessionUI();
-    loadInsumos();
+    loadAll();
   }
 })();

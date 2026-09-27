@@ -22,7 +22,7 @@
         <div class="login-brand-content">
           <p class="eyebrow">Sistema de inventario</p>
           <h1>Mariscos<br>El Gordo</h1>
-          <p class="lead">Control de camarón, pescado, pulpo, verduras y bebidas entre las 3 sucursales, en un solo lugar.</p>
+          <p class="lead">CEDIS y 3 sucursales conectados: control de stock, solicitudes y transferencias, todo en kilos.</p>
         </div>
       </div>
       <div class="login-form-panel">
@@ -39,7 +39,10 @@
           <button type="submit" class="btn btn-primary btn-block">Entrar</button>
           <p id="login-error" class="form-error" hidden></p>
 
-          <p class="form-footnote">Cuenta de prueba: <strong>admin / admin123</strong></p>
+          <p class="form-footnote">
+            Admin: <strong>admin / admin123</strong><br>
+            Encargados: <strong>encargado_centro</strong>, <strong>encargado_norte</strong>, <strong>encargado_sur</strong> — clave: <strong>clave123</strong>
+          </p>
         </form>
       </div>
     </div>
@@ -58,51 +61,165 @@
       </div>
     </header>
 
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-tab="inventario">Inventario</button>
+      <button class="tab" data-tab="solicitudes">Solicitudes</button>
+      <button class="tab" data-tab="transferencias">Transferencias</button>
+    </nav>
+
     <main class="content">
 
-      <div class="toolbar">
-        <div class="branch-filter" id="branch-filter">
-          <button class="chip is-active" data-sucursal="todas">Todas</button>
-          <button class="chip" data-sucursal="Centro">Centro</button>
-          <button class="chip" data-sucursal="Norte">Norte</button>
-          <button class="chip" data-sucursal="Sur">Sur</button>
+      <!-- ---------- TAB: INVENTARIO ---------- -->
+      <div class="tab-panel is-active" id="panel-inventario">
+        <div class="toolbar">
+          <div class="branch-filter" id="branch-filter">
+            <button class="chip is-active" data-sucursal="todas">Todas</button>
+            <button class="chip" data-sucursal="CEDIS">CEDIS</button>
+            <button class="chip" data-sucursal="Centro">Centro</button>
+            <button class="chip" data-sucursal="Norte">Norte</button>
+            <button class="chip" data-sucursal="Sur">Sur</button>
+          </div>
+          <button id="new-insumo-btn" class="btn btn-primary">+ Nuevo insumo</button>
         </div>
-        <button id="new-insumo-btn" class="btn btn-primary">+ Nuevo insumo</button>
+
+        <div class="stats-row">
+          <div class="stat">
+            <span class="stat-value" id="stat-total">0</span>
+            <span class="stat-label">Insumos en esta vista</span>
+          </div>
+          <div class="stat stat-alert">
+            <span class="stat-value" id="stat-bajo">0</span>
+            <span class="stat-label">Con stock bajo</span>
+          </div>
+          <div class="stat stat-warning">
+            <span class="stat-value" id="stat-caduca">0</span>
+            <span class="stat-label">Por caducar (7 días)</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="insumos-table">
+            <thead>
+              <tr>
+                <th>Insumo</th>
+                <th>Categoría</th>
+                <th>Sucursal</th>
+                <th>Cantidad (kg)</th>
+                <th>Mínimo</th>
+                <th>Caducidad</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="insumos-tbody"></tbody>
+          </table>
+          <p id="empty-state" class="empty-state" hidden>No hay insumos para esta vista todavía.</p>
+        </div>
       </div>
 
-      <div class="stats-row">
-        <div class="stat">
-          <span class="stat-value" id="stat-total">0</span>
-          <span class="stat-label">Insumos registrados</span>
+      <!-- ---------- TAB: SOLICITUDES ---------- -->
+      <div class="tab-panel" id="panel-solicitudes">
+
+        <div class="panel-card" id="solicitud-form-card">
+          <h3>Nueva solicitud a CEDIS</h3>
+          <p class="form-hint">Pide un insumo para tu sucursal. El administrador la atenderá desde CEDIS.</p>
+          <form id="solicitud-form">
+            <div class="form-row form-row-3">
+              <div>
+                <label for="s-categoria">Categoría</label>
+                <select id="s-categoria" name="categoria" required>
+                  <option value="proteinas">Proteínas</option>
+                  <option value="verduras">Verduras</option>
+                  <option value="bebidas">Bebidas</option>
+                </select>
+              </div>
+              <div>
+                <label for="s-nombre">Insumo</label>
+                <input id="s-nombre" name="nombre" type="text" placeholder="Camarón" required />
+              </div>
+              <div>
+                <label for="s-cantidad">Cantidad (kg)</label>
+                <input id="s-cantidad" name="cantidadKg" type="number" min="0.5" step="0.5" required />
+              </div>
+            </div>
+            <p id="solicitud-error" class="form-error" hidden></p>
+            <button type="submit" class="btn btn-primary">Enviar solicitud</button>
+          </form>
         </div>
-        <div class="stat stat-alert">
-          <span class="stat-value" id="stat-bajo">0</span>
-          <span class="stat-label">Con stock bajo</span>
-        </div>
-        <div class="stat stat-warning">
-          <span class="stat-value" id="stat-caduca">0</span>
-          <span class="stat-label">Por caducar (7 días)</span>
+
+        <div class="table-wrap">
+          <table class="insumos-table" id="solicitudes-table">
+            <thead>
+              <tr>
+                <th class="col-admin-only">Sucursal</th>
+                <th>Categoría</th>
+                <th>Insumo</th>
+                <th>Cantidad (kg)</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="solicitudes-tbody"></tbody>
+          </table>
+          <p id="solicitudes-empty" class="empty-state" hidden>Todavía no hay solicitudes.</p>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table class="insumos-table">
-          <thead>
-            <tr>
-              <th>Insumo</th>
-              <th>Sucursal</th>
-              <th>Cantidad</th>
-              <th>Mínimo</th>
-              <th>Caducidad</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="insumos-tbody">
-            <!-- filas generadas por app.js -->
-          </tbody>
-        </table>
-        <p id="empty-state" class="empty-state" hidden>No hay insumos para esta sucursal todavía.</p>
+      <!-- ---------- TAB: TRANSFERENCIAS ---------- -->
+      <div class="tab-panel" id="panel-transferencias">
+
+        <div class="panel-card" id="transferencia-form-card">
+          <h3>Transferir de CEDIS a una sucursal</h3>
+          <p class="form-hint">Movimiento directo, sin pasar por una solicitud (solo administración).</p>
+          <form id="transferencia-form">
+            <div class="form-row form-row-4">
+              <div>
+                <label for="t-categoria">Categoría</label>
+                <select id="t-categoria" name="categoria" required>
+                  <option value="proteinas">Proteínas</option>
+                  <option value="verduras">Verduras</option>
+                  <option value="bebidas">Bebidas</option>
+                </select>
+              </div>
+              <div>
+                <label for="t-nombre">Insumo</label>
+                <input id="t-nombre" name="nombre" type="text" placeholder="Camarón" required />
+              </div>
+              <div>
+                <label for="t-cantidad">Cantidad (kg)</label>
+                <input id="t-cantidad" name="cantidadKg" type="number" min="0.5" step="0.5" required />
+              </div>
+              <div>
+                <label for="t-destino">Sucursal destino</label>
+                <select id="t-destino" name="destino" required>
+                  <option value="Centro">Centro</option>
+                  <option value="Norte">Norte</option>
+                  <option value="Sur">Sur</option>
+                </select>
+              </div>
+            </div>
+            <p id="transferencia-error" class="form-error" hidden></p>
+            <button type="submit" class="btn btn-primary">Transferir</button>
+          </form>
+        </div>
+
+        <div class="table-wrap">
+          <table class="insumos-table">
+            <thead>
+              <tr>
+                <th>Insumo</th>
+                <th>Categoría</th>
+                <th>Cantidad (kg)</th>
+                <th>Destino</th>
+                <th>Fecha</th>
+                <th>Realizó</th>
+              </tr>
+            </thead>
+            <tbody id="transferencias-tbody"></tbody>
+          </table>
+          <p id="transferencias-empty" class="empty-state" hidden>Todavía no hay transferencias registradas.</p>
+        </div>
       </div>
 
     </main>
@@ -116,34 +233,39 @@
         <label for="f-nombre">Nombre</label>
         <input id="f-nombre" name="nombre" type="text" placeholder="Camarón" required />
 
-        <label for="f-sucursal">Sucursal</label>
-        <select id="f-sucursal" name="sucursal" required>
-          <option value="Centro">Centro</option>
-          <option value="Norte">Norte</option>
-          <option value="Sur">Sur</option>
-        </select>
-
         <div class="form-row">
           <div>
-            <label for="f-cantidad">Cantidad inicial</label>
-            <input id="f-cantidad" name="cantidad" type="number" min="0" step="0.5" required />
+            <label for="f-categoria">Categoría</label>
+            <select id="f-categoria" name="categoria" required>
+              <option value="proteinas">Proteínas</option>
+              <option value="verduras">Verduras</option>
+              <option value="bebidas">Bebidas</option>
+            </select>
           </div>
           <div>
-            <label for="f-unidad">Unidad</label>
-            <input id="f-unidad" name="unidad" type="text" placeholder="kg" required />
+            <label for="f-sucursal">Sucursal</label>
+            <select id="f-sucursal" name="sucursal" required>
+              <option value="CEDIS">CEDIS</option>
+              <option value="Centro">Centro</option>
+              <option value="Norte">Norte</option>
+              <option value="Sur">Sur</option>
+            </select>
           </div>
         </div>
 
         <div class="form-row">
           <div>
-            <label for="f-minimo">Stock mínimo</label>
+            <label for="f-cantidad">Cantidad inicial (kg)</label>
+            <input id="f-cantidad" name="cantidadKg" type="number" min="0" step="0.5" required />
+          </div>
+          <div>
+            <label for="f-minimo">Stock mínimo (kg)</label>
             <input id="f-minimo" name="stockMinimo" type="number" min="0" step="0.5" required />
           </div>
-          <div>
-            <label for="f-caducidad">Caducidad</label>
-            <input id="f-caducidad" name="caducidad" type="date" />
-          </div>
         </div>
+
+        <label for="f-caducidad">Caducidad (opcional)</label>
+        <input id="f-caducidad" name="caducidad" type="date" />
 
         <p id="modal-error" class="form-error" hidden></p>
 
