@@ -1,8 +1,8 @@
-# Mariscos El Gordo — Módulo de Autenticación y Registro de Insumos
+# Mariscos El Gordo — Sistema de Inventario (Backend + Frontend)
 
-Módulo básico del sistema de inventario multi-sucursal: autenticación con JWT,
-roles (`admin` / `encargado`) y CRUD de insumos, con pruebas unitarias (Jest)
-y pipeline de CI/CD (GitHub Actions).
+Módulo del sistema de inventario multi-sucursal: autenticación con JWT,
+roles (`admin` / `encargado`), CRUD de insumos, **frontend web funcional**
+(login + dashboard), pruebas unitarias (Jest) y pipeline de CI/CD (GitHub Actions).
 
 ## Requisitos
 - Node.js 18 o superior
@@ -15,11 +15,24 @@ npm install
 npm start
 ```
 
-El servidor corre en `http://localhost:3000`.
+Abre `http://localhost:3000` en el navegador — ahí está la página de login y
+el dashboard de inventario (no solo la API).
 
 Usuario administrador ya creado (sembrado) para pruebas:
 - **usuario:** `admin`
 - **contraseña:** `admin123`
+
+## Frontend
+
+La carpeta `public/` contiene la interfaz web (HTML + CSS + JS puro, sin
+frameworks), servida directamente por el mismo servidor Express:
+
+- **Login** (`/`) — pantalla de acceso con el usuario de prueba.
+- **Dashboard** — filtro por sucursal (Centro/Norte/Sur/Todas), tarjetas de
+  resumen (total de insumos, stock bajo, próximos a caducar), tabla de
+  insumos con edición de stock en línea, alta de nuevos insumos (solo
+  `admin`) y eliminación (solo `admin`). El personal de cocina (`encargado`)
+  puede actualizar cantidades pero no da de alta ni elimina insumos.
 
 ## Endpoints principales
 
