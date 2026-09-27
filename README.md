@@ -1,8 +1,12 @@
 # Mariscos El Gordo — Sistema de Inventario (Backend + Frontend)
 
-Módulo del sistema de inventario multi-sucursal: autenticación con JWT,
-roles (`admin` / `encargado`), CRUD de insumos, **frontend web funcional**
-(login + dashboard), pruebas unitarias (Jest) y pipeline de CI/CD (GitHub Actions).
+Sistema de inventario multi-sucursal con un **CEDIS** (almacén central) que
+distribuye insumos a 3 sucursales (Centro, Norte, Sur). Incluye autenticación
+con JWT, roles (`admin` / `encargado` por sucursal), CRUD de insumos,
+**solicitudes** de sucursal a CEDIS, **transferencias** de CEDIS a sucursal,
+frontend web funcional, pruebas unitarias (Jest) y pipeline de CI/CD (GitHub Actions).
+
+Todas las cantidades se manejan en **kilogramos (kg)**.
 
 ## Requisitos
 - Node.js 18 o superior
@@ -18,21 +22,45 @@ npm start
 Abre `http://localhost:3000` en el navegador — ahí está la página de login y
 el dashboard de inventario (no solo la API).
 
-Usuario administrador ya creado (sembrado) para pruebas:
-- **usuario:** `admin`
-- **contraseña:** `admin123`
+## Usuarios de prueba (ya sembrados)
+
+| Usuario             | Contraseña  | Rol         | Alcance                          |
+|----------------------|-------------|-------------|-----------------------------------|
+| `admin`              | `admin123`  | admin       | Controla CEDIS y las 3 sucursales |
+| `encargado_centro`   | `clave123`  | encargado   | Solo sucursal Centro              |
+| `encargado_norte`    | `clave123`  | encargado   | Solo sucursal Norte               |
+| `encargado_sur`      | `clave123`  | encargado   | Solo sucursal Sur                 |
+
+## Modelo de negocio
+
+- **CEDIS**: es una "sucursal" especial que concentra el inventario general.
+  Solo el `admin` puede ver, dar de alta insumos ahí y modificar su stock
+  manualmente (por ejemplo, al recibir mercancía de un proveedor).
+- **Solicitud**: un `encargado` pide un insumo (categoría: proteínas,
+  verduras o bebidas) para su propia sucursal. Queda `pendiente` hasta que
+  el admin la atiende o la rechaza.
+- **Transferencia**: al atender una solicitud (o al hacer un movimiento
+  directo), se resta la cantidad del stock de CEDIS y se suma al de la
+  sucursal destino — validando que haya stock suficiente en CEDIS antes de
+  mover nada. Queda como historial (el "registro de insumos llegados" a
+  cada sucursal).
+- Un `encargado` solo ve y modifica el inventario, las solicitudes y las
+  transferencias de **su propia sucursal**; el `admin` ve y controla todo.
 
 ## Frontend
 
 La carpeta `public/` contiene la interfaz web (HTML + CSS + JS puro, sin
-frameworks), servida directamente por el mismo servidor Express:
+frameworks), servida directamente por el mismo servidor Express, con 3 pestañas:
 
-- **Login** (`/`) — pantalla de acceso con el usuario de prueba.
-- **Dashboard** — filtro por sucursal (Centro/Norte/Sur/Todas), tarjetas de
-  resumen (total de insumos, stock bajo, próximos a caducar), tabla de
-  insumos con edición de stock en línea, alta de nuevos insumos (solo
-  `admin`) y eliminación (solo `admin`). El personal de cocina (`encargado`)
-  puede actualizar cantidades pero no da de alta ni elimina insumos.
+- **Inventario** — filtro por sucursal (CEDIS/Centro/Norte/Sur/Todas, según
+  el rol), tarjetas de resumen (stock bajo, próximos a caducar), tabla con
+  edición de stock en línea, alta de insumos y eliminación (solo `admin`).
+- **Solicitudes** — un `encargado` arma una solicitud a CEDIS (categoría +
+  insumo + kg); el `admin` ve todas las solicitudes y puede **Atender**
+  (dispara la transferencia real) o **Rechazar**.
+- **Transferencias** — el `admin` puede transferir de CEDIS a una sucursal
+  directamente; la tabla sirve como bitácora de todo lo que ha llegado a
+  cada sucursal (un `encargado` solo ve lo que llegó a la suya).
 
 ## Endpoints principales
 
@@ -40,11 +68,17 @@ frameworks), servida directamente por el mismo servidor Express:
 |--------|--------------------------|----------------------|---------------------------------------|
 | POST   | /api/auth/login          | público              | Inicia sesión, regresa un JWT         |
 | POST   | /api/auth/register       | admin                | Crea un nuevo usuario (encargado)     |
-| GET    | /api/insumos             | admin o encargado    | Lista todos los insumos               |
-| GET    | /api/insumos/:id         | admin o encargado    | Consulta un insumo                    |
-| POST   | /api/insumos             | admin                | Da de alta un nuevo insumo            |
-| PUT    | /api/insumos/:id/stock   | admin o encargado    | Actualiza el stock (entrada/salida)   |
+| GET    | /api/insumos             | admin o encargado    | Lista insumos (admin: todos incl. CEDIS; encargado: solo su sucursal) |
+| GET    | /api/insumos/:id         | admin o encargado    | Consulta un insumo (con la misma restricción por sucursal) |
+| POST   | /api/insumos             | admin                | Da de alta un nuevo insumo (en CEDIS o en una sucursal) |
+| PUT    | /api/insumos/:id/stock   | admin o encargado*   | Actualiza el stock. *admin: cualquiera; encargado: solo el de su sucursal |
 | DELETE | /api/insumos/:id         | admin                | Elimina un insumo                     |
+| POST   | /api/solicitudes         | encargado             | Pide un insumo a CEDIS para su sucursal |
+| GET    | /api/solicitudes         | admin o encargado    | Lista solicitudes (admin: todas; encargado: solo las suyas) |
+| PUT    | /api/solicitudes/:id/atender | admin            | Atiende la solicitud y dispara la transferencia real |
+| PUT    | /api/solicitudes/:id/rechazar | admin           | Rechaza la solicitud                  |
+| POST   | /api/transferencias      | admin                | Transfiere de CEDIS a una sucursal directamente |
+| GET    | /api/transferencias      | admin o encargado    | Historial de transferencias (admin: todas; encargado: las que llegaron a su sucursal) |
 
 Ejemplo de login:
 ```bash
@@ -60,7 +94,7 @@ npm test
 ```
 
 Esto corre Jest con Supertest y genera un reporte de cobertura en `coverage/`.
-Resultado obtenido en este proyecto: **26 pruebas, 97.1% de cobertura**
+Resultado obtenido en este proyecto: **64 pruebas, 94.6% de cobertura**
 (umbral mínimo exigido: 80%). El reporte completo en texto está en
 `tests/coverage-report.txt` y el reporte HTML navegable en `coverage/lcov-report/index.html`
 (se genera al correr `npm test`, no se sube al repo).
